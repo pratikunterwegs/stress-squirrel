@@ -37,32 +37,25 @@ except Exception as e:
 # prelim code for earth engine landcover around duke
 
 # get transects from user assets
-downtown = ee.FeatureCollection("users/pratik_unterwegs/transect_squirrel_downtown")
-forest = ee.FeatureCollection("users/pratik_unterwegs/transect_squirrel_forest")
-
-# combine transects
-transects = downtown.merge(forest)
+transects = ee.FeatureCollection("users/pratik_unterwegs/squirrel_transects")
 
 # get a 1km buffer
-buffer_size_m = 1000
+buffer_size_m = 90
 transect_geom = transects.geometry()
 transect_buffer = transect_geom.buffer(buffer_size_m)
 
-# print information to check coords
-long, lat = transect_buffer.getInfo()['coordinates']
-
 # define start and end date
-start_date = '2019-05-01'
-end_date = '2019-10-01'
+start_date = '2020-04-01'
+end_date = '2020-10-01'
 
 # filter sentinel by bounding box
 # get sentinel data
 sentinel = ee.ImageCollection("COPERNICUS/S2")
 sentinel_bounds = sentinel.filterBounds(transect_buffer)
-sentinel_2019 = sentinel_bounds.filterDate(start_date, end_date)
+sentinel_2020 = sentinel_bounds.filterDate(start_date, end_date)
 
 # print some information
-count = sentinel_2019.size().getInfo()
+count = sentinel_2020.size().getInfo()
 print("Count: ", count)
 
 # adding a NDVI band
@@ -76,23 +69,26 @@ sentinel_ndvi = sentinel_2019.map(add_ndvi)
 # get median values
 ndvi_median = sentinel_ndvi.select('ndvi').mean()
 
+# clip to geometry
+ndvi_clip = ndvi_median.clip(transect_buffer)
+
 # Define an sld style color ramp to apply to the image.
 sld_ramp = \
   '<RasterSymbolizer>' + \
     '<ColorMap type="ramp" extended="false" >' + \
-      '<ColorMapEntry color="#440154" quantity="-0" label="0"/>' + \
-      '<ColorMapEntry color="#F46D43" quantity="0.1" label="100" />' + \
-      '<ColorMapEntry color="#FDAE61" quantity="0.25" label="200" />' + \
-      '<ColorMapEntry color="#FEE08B" quantity="0.35" label="300" />' + \
-      '<ColorMapEntry color="#66BD63" quantity="0.45" label="400" />' + \
-      '<ColorMapEntry color="#1A9850" quantity="0.55" label="500" />' + \
+      '<ColorMapEntry color="#0D0887" quantity="-0" label="0"/>' + \
+      '<ColorMapEntry color="#5D01A6" quantity="0.1" label="100" />' + \
+      '<ColorMapEntry color="#9C179E" quantity="0.25" label="200" />' + \
+      '<ColorMapEntry color="#CC4678" quantity="0.35" label="300" />' + \
+      '<ColorMapEntry color="#ED7953" quantity="0.45" label="400" />' + \
+      '<ColorMapEntry color="#F0F921" quantity="0.55" label="500" />' + \
     '</ColorMap>' + \
   '</RasterSymbolizer>';
 
 # print layers
 vis = {'bands': ['ndvi']}
-Map = emap.Map(center=[36,-79], zoom=10)
-Map.addLayer(ndvi_median.sldStyle(sld_ramp), {}, 'ndvi')
-# Map.addLayer(transect_buffer)
+Map = geemap.Map(center=[36,-79], zoom=4)
+Map.addLayer(ndvi_clip.sldStyle(sld_ramp), {}, 'ndvi')
+Map.addLayer(transects)
 Map.addLayerControl()
 Map
