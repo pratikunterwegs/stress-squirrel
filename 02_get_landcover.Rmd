@@ -1,0 +1,74 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Load libraries
+
+Refer to the `ipython` script that runs on _Colab_ for NDVI and NDBI extraction.
+
+```{r}
+# libraries for spatial
+library(raster)
+library(sf)
+library(stars)
+# libraries for plotting
+library(ggplot2)
+```
+
+```{r}
+# load raster
+built_up <- read_stars("data/spatial/duke_built_up.tif")
+
+# load transects and buffer
+# find files
+transects <- list.files("data/spatial/", pattern = "gpx", full.names = TRUE)
+# read files as sf
+transects <- lapply(transects, sf::st_read, layer = "tracks")
+
+# get buffer sizes in metres
+buffer <- rep(c(40, 90), each = length(transects))
+
+# convert to UTM17, buffer by 40 or 90m and reconvert
+transect_buffers <- mapply(function(z, b) {
+  z <- st_transform(z, 32617)
+  z <- st_buffer(z, b)
+  z <- st_transform(z, 4326)
+  z$buffer_size <- b
+  return(z)
+}, append(transects, transects), buffer, SIMPLIFY = F)
+
+# reduce
+tb <- Reduce(rbind, transect_buffers)
+tb <- tb[, c("name", "buffer_size")]
+```
+
+## Plot transect buffer and built up area
+
+```{r}
+fig_built_up <- ggplot()+
+  geom_stars(data = built_up,
+             show.legend = FALSE)+
+  geom_sf(data = tb, 
+          fill = NA,
+          col = "white")+
+  facet_grid(~ buffer_size,
+             labeller = label_both)+
+  scale_fill_viridis_c(option = c("B"),
+                       limits = c(NA, 0),
+                       na.value = "gold")+
+  theme_test()+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank())
+
+ggsave(fig_built_up, filename = "figures/fig_built_up.png")
+```
+
+## Boxplots of built up values
+
+```{r}
+# read raster
+built_up <- st_ras
+```
+
