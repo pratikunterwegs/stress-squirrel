@@ -47,15 +47,20 @@ tb <- tb[, c("name", "buffer_size")]
 ## Plot transect buffer and built up area
 
 ```{r}
-fig_built_up <- ggplot()+
+fig_built_up <-
+  ggplot()+
   geom_stars(data = built_up,
              show.legend = FALSE)+
   geom_sf(data = tb, 
           fill = NA,
-          col = "white")+
-  facet_grid(~ buffer_size,
-             labeller = label_both)+
-  scale_fill_viridis_c(option = c("B"),
+          col = "white",
+          aes(lty = factor(buffer_size)),
+          show.legend = F)+
+  # scale_fill_viridis_c(option = c("B"),
+  #                      limits = c(NA, 0),
+  #                      na.value = "gold")+
+  scico::scale_fill_scico(palette = "batlow",
+                        
                        limits = c(NA, 0),
                        na.value = "gold")+
   theme_test()+
@@ -69,6 +74,9 @@ ggsave(fig_built_up, filename = "figures/fig_built_up.png")
 
 ```{r}
 # read raster
-built_up <- st_ras
+built_up <- raster("data/spatial/duke_built_up.tif")
+
+# scale values
+
 ```
 
