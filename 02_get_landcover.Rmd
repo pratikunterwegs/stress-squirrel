@@ -14,7 +14,6 @@ Refer to the `ipython` script that runs on _Colab_ for NDVI and NDBI extraction.
 # libraries for spatial
 library(raster)
 library(sf)
-library(stars)
 
 # general
 library(data.table)
@@ -110,6 +109,7 @@ values(built_up) <- scales::rescale(values(built_up))
 bu_vals <- lapply(transect_buffers, function(z) {
   vals_here <- extract(built_up, as(z, "Spatial"))
   data.table(transect_name = z$name,
+             label = z$label,
              buffer_size = z$buffer_size,
              bu = unlist(vals_here))
 })
@@ -178,6 +178,7 @@ values(ndvi) <- scales::rescale(values(ndvi))
 ndvi_vals <- lapply(transect_buffers, function(z) {
   vals_here <- extract(ndvi, as(z, "Spatial"))
   data.table(transect_name = z$name,
+             label = z$label,
              buffer_size = z$buffer_size,
              ndvi = unlist(vals_here))
 })
@@ -263,3 +264,48 @@ fig_combined <- image_append(c(fig_map, fig_box), stack = T)
 # save combined image
 image_write(image = fig_combined, path = "figures/fig_ndvi_map_boxplot.png")
 ```
+
+## Transect wise metric mean and variance
+
+```{r}
+# convert to data frames
+env_data <- lapply(list(bu_vals, ndvi_vals), rbindlist)
+
+# assign key
+env_data <- lapply(env_data, function(df) {
+  df[, key := seq(nrow(df))]
+})
+
+# bind sideways
+env_data <- Reduce(merge, env_data)
+
+# plot ndvi ~ bu
+fig_ndvi_bu <- ggplot()+
+  geom_point(data = env_data,
+             aes(ndvi, bu,
+                 colour = transect_name),
+             size = 0.1, alpha = 0.1,
+             show.legend = F)+
+  geom_smooth(data = env_data,
+              aes(ndvi, bu,
+                  group = transect_name),
+              method = "glm",
+              size = 0.2)+
+  facet_grid( ~ buffer_size,
+              labeller = label_both)+
+  coord_equal()+
+  theme_test()+
+  theme(legend.position = "top")+
+  labs(x = "NDVI", y = "Built-up index")
+
+# save
+ggsave(fig_ndvi_bu, filename = "figures/fig_ndvi_bu.png", width = 185/25)
+
+# get mean and variance
+env_data_summary <- dcast(env_data, transect_name + buffer_size ~ 1, 
+      fun.aggregate = list(mean, var), value.var = c("ndvi", "bu"))
+
+# save data
+fwrite(env_data_summary, file = "data/data_env_summary.csv")
+```
+
