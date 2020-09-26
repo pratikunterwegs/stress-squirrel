@@ -13,7 +13,7 @@ library(sf)
 
 ```{r}
 # find files
-transects <- list.files("data/spatial/", pattern = "gpx", full.names = TRUE)
+transects <- list.files("data/raw/", pattern = "gpx", full.names = TRUE)
 # read files as sf
 transects <- lapply(transects, sf::st_read, layer = "tracks")
 
@@ -38,7 +38,7 @@ tb <- tb[, c("name", "buffer_size")]
 
 ```{r}
 # export as shp
-st_write(tb, "data/spatial/transects_all.shp", delete_dsn = T)
+st_write(tb, "data/raw/transects_all.shp", delete_dsn = T)
 
 # export bounds
 tb_bbox <- st_sf(st_as_sfc(st_bbox(tb)))

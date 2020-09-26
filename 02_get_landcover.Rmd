@@ -30,7 +30,7 @@ ndvi <- raster("data/spatial/duke_ndvi.tif")
 
 # load transects and buffer
 # find files
-transects <- list.files("data/spatial/", pattern = "gpx", full.names = TRUE)
+transects <- list.files("data/raw/", pattern = "gpx", full.names = TRUE)
 # read files as sf
 transects <- lapply(transects, sf::st_read, layer = "tracks")
 
