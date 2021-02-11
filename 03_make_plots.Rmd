@@ -1,0 +1,364 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Making some plot
+
+## Get libs
+
+```{r}
+# for data
+library(readxl)
+library(dplyr)
+library(forcats)
+
+# for figure
+library(ggplot2)
+library(scico)
+```
+
+
+## Get data
+
+```{r}
+# path to data
+eachtrans <- read_excel("data/transect data_eachwalk.xlsx")
+
+# taking a look
+eachtrans
+
+# make selected columns factors by apply as.factor "across"
+# columns of interest
+eachtrans <- eachtrans %>%
+  mutate(
+    across(
+      c(
+        transect_name, transect,
+        T_name, type,
+        condition, condition2
+      ),
+      as.factor
+    )
+  )
+```
+
+
+## Relative squirrel abundance
+
+### Prepare data
+
+```{r}
+
+# relative squirrel abundance
+eachtrans$condition <- recode(
+  eachtrans$condition,
+  June = "June",
+  Sept = "September",
+  Nov = "November",
+  Feb = "February"
+)
+
+# get intermediate data
+data_plot <-
+  eachtrans %>%
+  mutate(condition = fct_relevel(
+    condition,
+    "June", "September", "November",
+    "February",
+  )) %>%
+  mutate(T_name = fct_relevel(
+    T_name,
+    "DT", "C_R", "C_S", "C_C", "CE", "F",
+  ))
+
+# mean ndvi per transect
+data_ndvi <- distinct(
+  data_plot,
+  T_name, ndvi_mean
+)
+
+# round to 2 digits and arrange df by ndvi
+data_ndvi <- mutate(data_ndvi,
+  ndvi_mean = round(ndvi_mean, 2)
+) %>%
+  arrange(ndvi_mean)
+```
+
+### Make figure
+
+```{r}
+# plot the data
+fig_squirrel_abundance = 
+  ggplot(
+    data = data_plot,
+    aes(
+      x = as.numeric(T_name), # plot as numeric values; req for secondary axis
+      y = rel_sq_abun
+    )
+  ) +
+  geom_jitter(
+    aes(fill = T_name),
+    width = 0.1,
+    size = 3,
+    shape = 21
+  ) +
+  scale_y_continuous(breaks = c(0, 2, 4, 6, 8)) +
+  
+  # secondary axis code here
+  scale_x_continuous(
+    sec.axis = dup_axis(
+      name = "Transect mean NDVI (MM/YY - MM/YY)",
+      labels = data_ndvi$ndvi_mean # from the ndvi mean data
+    ),
+    # trick into showing all values 1 - 6
+    # then give labels as T_name levels
+    breaks = seq(6),
+    labels = levels(data_plot$T_name)
+  ) +
+  stat_summary(
+    fun.data = mean_cl_boot,
+    geom = "pointrange",
+    size = 1,
+    shape = 21,
+    fill = "white"
+  ) +
+  coord_flip() +
+  theme_bw(
+    base_size = 18, # control all text sizes from here
+    base_family = "Arial"
+  ) +
+  theme(
+    # axis.title.x = element_text(color = "black", size = 18),
+    # axis.title.y = element_text(color = "black", size = 18),
+    # axis.text.x = element_text(size = 18),
+    # axis.text.y = element_text(size = 18),
+    # strip.text = element_text(size = 16),
+    legend.position = "none"
+  ) +
+  facet_wrap(~condition, ncol = 4) +
+  labs(
+    x = NULL,
+    y = "Relative squirrel abundance (individuals/ha)"
+  )
+
+# save to file
+ggsave(
+  fig_squirrel_abundance,
+  filename = "figures/fig_squirrel_abundance.png"
+)
+```
+
+## Relative people abundance
+
+```{r}
+# data already prepared
+
+# make figure
+# plot the data
+fig_people_abundance =
+  ggplot(
+    data = data_plot,
+    aes(
+      x = as.numeric(T_name), # plot as numeric values; req for secondary axis
+      y = rel_peo_abun
+    )
+  ) +
+  geom_jitter(
+    aes(fill = T_name),
+    width = 0.1,
+    size = 3,
+    shape = 21
+  ) +
+  scale_y_continuous(breaks=c(0,15,30,45))+
+  
+  # secondary axis code here
+  scale_x_continuous(
+    sec.axis = dup_axis(
+      name = "Transect mean NDVI (MM/YY - MM/YY)",
+      labels = data_ndvi$ndvi_mean # from the ndvi mean data
+    ),
+    # trick into showing all values 1 - 6
+    # then give labels as T_name levels
+    breaks = seq(6),
+    labels = levels(data_plot$T_name)
+  ) +
+  stat_summary(
+    fun.data = mean_cl_boot,
+    geom = "pointrange",
+    size = 1,
+    shape = 21,
+    fill = "white"
+  ) +
+  coord_flip() +
+  theme_bw(
+    base_size = 18, # control all text sizes from here
+    base_family = "Arial"
+  ) +
+  theme(
+    # axis.title.x = element_text(color = "black", size = 18),
+    # axis.title.y = element_text(color = "black", size = 18),
+    # axis.text.x = element_text(size = 18),
+    # axis.text.y = element_text(size = 18),
+    # strip.text = element_text(size = 16),
+    legend.position = "none"
+  ) +
+  facet_wrap(~condition, ncol = 4) +
+  labs(
+    x = NULL,
+    y = "Relative people abundance (people/ha)"
+  )
+
+# save to file
+ggsave(
+  fig_people_abundance,
+  filename = "figures/fig_people_abundance.png"
+)
+```
+
+## Fancy options
+
+```{r}
+plot_ndvi =
+  ggplot(data_ndvi)+
+  geom_tile(
+    aes(0, 
+        as.numeric(T_name),
+        fill = ndvi_mean),
+    width = 0.2,
+    show.legend = F
+  )+
+  scale_y_continuous(
+    breaks = seq(6),
+    sec.axis = dup_axis(
+      name = "Mean NDVI",
+      labels = data_ndvi$ndvi_mean
+    )
+  )+
+  scale_fill_scico(
+    palette = "bamako",
+    direction = -1,
+    trans = "log10"
+  )+
+  coord_cartesian(
+    expand = F,
+    xlim = c(-0.05, 0.05)
+  )+
+  theme_test()+
+  theme(
+    axis.text.y = element_blank(),
+    axis.text.x = element_blank()
+  )+
+  labs(x = NULL,
+       y = NULL)
+```
+
+## Relative people abundance
+
+```{r}
+# data already prepared
+
+# make figure
+# plot the data
+fig_combined =
+  ggplot(
+    data = data_plot,
+    aes(
+      x = as.numeric(T_name), # plot as numeric values; req for secondary axis
+    )
+  ) +
+  geom_jitter(
+    aes(y = rel_peo_abun),
+    # width = 0.1,
+    size = 3,
+    # stroke = 1,
+    shape = 2,
+    position = position_nudge(x = 0.1)
+  ) +
+    geom_jitter(
+    aes(y = rel_sq_abun * 5),
+    # width = 0.1,
+    size = 3,
+    # stroke = 1,
+    shape = 1,
+    position = position_nudge(x = -0.1)
+  ) +
+    # geom_hline(
+    #   yintercept = c(1, 15),
+    #   col = rep(c("indianred", "dodgerblue"), 4),
+    #   # size = 0.2,
+    #   lty = 2
+    # )+
+  scale_y_sqrt(breaks=c(0,1,5,15,30,45)
+               # sec.axis = dup_axis(
+               #   trans = ~ . / 5,
+               #   breaks = c(0, 2, 4, 6)
+               # )
+  )+
+  scale_x_continuous(
+    # sec.axis = dup_axis(
+    #   name = "Transect mean NDVI (MM/YY - MM/YY)",
+    #   labels = data_ndvi$ndvi_mean # from the ndvi mean data
+    # ),
+    # trick into showing all values 1 - 6
+    # then give labels as T_name levels
+    breaks = seq(6),
+    labels = levels(data_plot$T_name)
+  ) +
+  # secondary axis code here
+  stat_summary(
+    aes(y = rel_peo_abun),
+    fun.data = mean_cl_boot,
+    geom = "pointrange",
+    # size = 1,
+    shape = 24,
+    fill = "indianred",
+    position = position_nudge(x = 0.1)
+  ) +
+    stat_summary(
+      aes(y = rel_sq_abun * 5),
+    fun.data = mean_cl_boot,
+    geom = "pointrange",
+    # size = 1,
+    shape = 21,
+    fill = "dodgerblue",
+    position = position_nudge(x = -0.1)
+  ) +
+  coord_flip() +
+  theme_test(
+    base_size = 12, # control all text sizes from here
+    base_family = "Arial"
+  ) +
+  theme(
+    # axis.title.x = element_text(color = "black", size = 18),
+    # axis.title.y = element_text(color = "black", size = 18),
+    # axis.text.x = element_text(size = 18),
+    # axis.text.y = element_text(size = 18),
+    # strip.text = element_text(size = 16),
+    legend.position = "none"
+  ) +
+  facet_wrap(~condition, ncol = 4) +
+  labs(
+    x = "Transect",
+    y = "Relative abundance (individuals/ha)"
+  )
+
+```
+
+```{r}
+# add colours
+figure_with_ndvi = 
+  wrap_plots(
+    fig_combined,
+    plot_ndvi,
+    design = "AAAAAAAAAAAAAAAB"
+  )
+
+ggsave(
+  figure_with_ndvi,
+  filename = "figures/fig_transect_abundance.png",
+  width = 6, height = 3
+)
+```
+
