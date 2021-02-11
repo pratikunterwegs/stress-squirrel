@@ -130,4 +130,5 @@ dmypy.json
 
 # no data
 data/raw
+data/*.xlsx
 .Rproj.user
