@@ -63,30 +63,32 @@ ndbi = raster("data/spatial/duke_built_up_cortisol.tif")
 
 ```{r}
 # extract data
-env_data = raster::extract(stack(ndvi, ndbi), 
-        y = as(cortisol_data_buffer, "Spatial"), 
-        fun = function(x, na.rm) {
-          v = round(
-            c(mean = mean(x, na.rm = na.rm),
-              median = median(x, na.rm = na.rm),
-              sd = sd(x, na.rm = na.rm)), 
-            4)
-        })
+env_data = lapply(seq(nrow(cortisol_data_buffer)), function(r) {
+  # extract data as matrix
+  raster::extract(
+    x = stack(ndvi, ndbi), 
+    y = as(cortisol_data_buffer[r,], "Spatial"), 
+    fun = function(x, na.rm) {
+      v = round(
+        c(mean = mean(x, na.rm = na.rm),
+          median = median(x, na.rm = na.rm),
+          sd = sd(x, na.rm = na.rm)),
+        4)
+    }) %>%
+    # convert to data frame, add id, rename variables
+    as_tibble(env_data, rownames = "metric") %>% 
+    mutate(ID_hormone = cortisol_data_buffer$ID_hormone[r]) %>% 
+    rename(ndvi = "duke_ndvi_cortisol",
+           built_up = "duke_built_up_cortisol") %>% 
+    # pivot wider
+    pivot_wider(
+      id_cols = ID_hormone,
+      names_from = metric, 
+      values_from = c("ndvi", "built_up")
+    )
+})
 
-# make tibble
-env_data = as_tibble(env_data, rownames = "metric")
-env_data$ID_hormone = rep(cortisol_data$ID_hormone, 3)
-
-# rename
-env_data = rename(env_data, 
-                  ndvi = "duke_ndvi_cortisol",
-                  built_up = "duke_built_up_cortisol")
-
-# cast wide
-env_data = pivot_wider(env_data,
-            id_cols = ID_hormone,
-            names_from = metric, 
-            values_from = c("ndvi", "built_up"))
+env_data = bind_rows(env_data)
 ```
 
 ## Join with sampling locations and save
