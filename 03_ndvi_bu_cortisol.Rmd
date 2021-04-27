@@ -1,0 +1,103 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Get NDVI and NDBI around Cortisol Sampling Points
+
+## Get libs
+
+```{r}
+# for data
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(sf)
+library(raster)
+```
+
+## Get data
+
+```{r}
+# path to data
+cortisol_data = read_excel("data/raw/hair data.xlsx")
+
+# get coordinates and id
+cortisol_sf = st_as_sf(cortisol_data, coords = c("lon", "lat"),
+                    crs = st_crs(4326))
+```
+
+## Make buffers
+
+```{r}
+# buffer size (in metres)
+area = 400000
+radius = sqrt(area / pi)
+
+# transform and make buffer
+cortisol_data_buffer = st_transform(cortisol_sf, crs = 32617) %>% 
+  st_buffer(radius) %>% 
+  st_transform(4326)
+
+# export bounding box
+cortisol_bbox = st_as_sfc(
+  cortisol_data_buffer %>% 
+    st_bbox()
+)
+st_write(cortisol_bbox, dsn = "data/spatial/data_cortisol_bbox.shp")
+```
+
+## Get NDVI and NDBI data
+
+Refer to the `iPython` file for Google Earth Engine for GEE Python scripts.
+
+```{r}
+# get rasters
+ndvi = raster("data/spatial/duke_ndvi_cortisol.tif")
+ndbi = raster("data/spatial/duke_built_up_cortisol.tif")
+```
+
+## Extract data
+
+```{r}
+# extract data
+env_data = raster::extract(stack(ndvi, ndbi), 
+        y = as(cortisol_data_buffer, "Spatial"), 
+        fun = function(x, na.rm) {
+          v = round(
+            c(mean = mean(x, na.rm = na.rm),
+              median = median(x, na.rm = na.rm),
+              sd = sd(x, na.rm = na.rm)), 
+            4)
+        })
+
+# make tibble
+env_data = as_tibble(env_data, rownames = "metric")
+env_data$ID_hormone = rep(cortisol_data$ID_hormone, 3)
+
+# rename
+env_data = rename(env_data, 
+                  ndvi = "duke_ndvi_cortisol",
+                  built_up = "duke_built_up_cortisol")
+
+# cast wide
+env_data = pivot_wider(env_data,
+            id_cols = ID_hormone,
+            names_from = metric, 
+            values_from = c("ndvi", "built_up"))
+```
+
+## Join with sampling locations and save
+
+```{r}
+# join
+cortisol_data = left_join(cortisol_data,
+                          env_data,
+                          by = "ID_hormone")
+
+# save
+write_csv(cortisol_data, "data/data_cortisol_environmental_data.csv")
+```
+
