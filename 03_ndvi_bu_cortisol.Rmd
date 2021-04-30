@@ -33,7 +33,7 @@ cortisol_sf = st_as_sf(cortisol_data, coords = c("lon", "lat"),
 
 ```{r}
 # buffer size (in metres)
-area = 400000
+area = 40000 # 4 hectares
 radius = sqrt(area / pi)
 
 # transform and make buffer
@@ -46,7 +46,8 @@ cortisol_bbox = st_as_sfc(
   cortisol_data_buffer %>% 
     st_bbox()
 )
-st_write(cortisol_bbox, dsn = "data/spatial/data_cortisol_bbox.shp")
+st_write(cortisol_bbox, dsn = "data/spatial/data_cortisol_bbox.shp",
+         append = F)
 ```
 
 ## Get NDVI and NDBI data
@@ -57,6 +58,9 @@ Refer to the `iPython` file for Google Earth Engine for GEE Python scripts.
 # get rasters
 ndvi = raster("data/spatial/duke_ndvi_cortisol.tif")
 ndbi = raster("data/spatial/duke_built_up_cortisol.tif")
+
+# rescale built up
+values(ndbi) = scales::rescale(values(ndbi))
 ```
 
 ## Extract data
