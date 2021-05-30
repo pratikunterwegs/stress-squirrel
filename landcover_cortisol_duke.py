@@ -37,8 +37,9 @@ except Exception as e:
 # get transects from user assets
 transects = ee.FeatureCollection("users/pratik_unterwegs/data_cortisol_bbox")
 
-# get a 1km buffer
+# get buffer
 transect_geom = transects.geometry()
+transect_geom = transect_geom.buffer(5000)
 
 # define start and end date
 start_date = '2020-04-01'
@@ -91,7 +92,7 @@ sld_ramp = \
 # print layers
 vis = {'bands': ['ndvi']}
 Map = geemap.Map(center=[36.0005,-78.9], zoom=12)
-Map.addLayer(built_clip.sldStyle(sld_ramp), {}, 'ndvi')
+Map.addLayer(built_clip.sldStyle(sld_ramp), {}, 'builtup')
 Map.addLayer(transects)
 Map.addLayerControl()
 
