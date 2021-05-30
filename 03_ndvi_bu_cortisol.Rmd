@@ -27,6 +27,18 @@ cortisol_data = read_excel("data/raw/hair data.xlsx")
 # get coordinates and id
 cortisol_sf = st_as_sf(cortisol_data, coords = c("lon", "lat"),
                     crs = st_crs(4326))
+
+# write to file
+st_write(cortisol_sf, dsn = "data/spatial/data_cortisol_duke.gpkg")
+
+# count unique coords
+cortisol_sf_count = group_by(cortisol_data, lon, lat) %>% 
+  count() %>% 
+  st_as_sf(coords = c("lon", "lat"),
+           crs = st_crs(4326))
+
+# save
+st_write(cortisol_sf_count, dsn = "data/spatial/data_cortisol_count_duke.gpkg")
 ```
 
 ## Make buffers
@@ -61,6 +73,10 @@ ndbi = raster("data/spatial/duke_built_up_cortisol.tif")
 
 # rescale built up
 values(ndbi) = scales::rescale(values(ndbi))
+
+# save raster
+writeRaster(ndbi, filename = "data/spatial/duke_built_up_cortisol.tif",
+            overwrite = T)
 ```
 
 ## Extract data
