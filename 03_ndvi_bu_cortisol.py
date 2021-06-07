@@ -1,5 +1,4 @@
 # code to import locations and sample rasters in a buffer
-import geopandas
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import box
