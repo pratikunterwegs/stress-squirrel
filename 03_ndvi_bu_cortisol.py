@@ -58,15 +58,28 @@ ndbi_array = ndbi_array - (np.nanmin(ndbi_array)) \
 # plot to check
 plt.imshow(ndbi_array, cmap='cividis')
 plt.colorbar()
+plt.show()
 
 #### WORK IN PROGRESS ####
 
 #save scaled array
 ndbi_write = rasterio.open("data/spatial/duke_built_up_cortisol.tif", 'w', **profile)
 ndbi_write.write(ndbi_array.astype(rasterio.float32), 1)
+ndbi_write.close()
 
 # get zonal stats
-ndvi_stats = zonal_stats("data/spatial/data_cortisol_buffer.gpkg",
-            "data/spatial/duke_ndvi_cortisol.tif", stats = ['mean','median'])
-ndbi_stats = zonal_stats("data/spatial/data_cortisol_buffer.gpkg",
-            "data/spatial/duke_built_up_cortisol.tif", stats = ['mean','median'])
+data_raster = []
+for name,file in zip(['ndvi', 'ndbi'], ['data/spatial/duke_ndvi_cortisol.tif', 'data/spatial/duke_built_up_cortisol.tif']):
+    zs = zonal_stats("data/spatial/data_cortisol_buffer.gpkg", file, 
+                    stats = ['mean','median','std'])
+    zs = pd.DataFrame(zs)
+    zs.rename(columns={'mean':(name + "_" + "mean"), 'std':(name + "_" + "sd"), 'median':(name + "_" + "median")}, inplace=True)
+    data_raster.append(zs)
+
+data_raster = pd.concat(data_raster, axis=1)
+
+# link to data
+data = pd.concat([data, data_raster], axis=1).drop(columns="geometry")
+
+# save file
+data.to_csv("data/data_cortisol_environmental_data_test.csv")
