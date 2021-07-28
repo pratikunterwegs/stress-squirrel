@@ -134,3 +134,10 @@ data/raw
 data/data_cortisol*.csv
 data/*.xlsx
 .Rproj.user
+
+# ignore shapefile data
+*.cpg
+*.dbf
+*.prj
+*.shp
+*.shx
