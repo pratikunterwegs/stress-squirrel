@@ -1,3 +1,4 @@
 # count rmd as R
 *.Rmd linguist-language=R
 *.rmd linguist-language=R
+*.ipynb linguist-language=Python
