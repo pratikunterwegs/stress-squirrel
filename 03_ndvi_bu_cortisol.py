@@ -8,22 +8,43 @@ import math
 from rasterstats import zonal_stats
 import matplotlib.pyplot as plt
 import numpy as np
+import functools
 
 # read in data
-data = pd.read_excel("data/raw/hair data.xlsx")
+data_duke = pd.read_excel("data/raw/hair data.xlsx")
+data_guelph = pd.read_excel("data/raw/NewmanLab_Hair_Duke.xlsx")
+
+# split data guelph coordinates column
+data_guelph[["lat", "lon"]] = data_guelph["Coordinates "].str.split(", ", 1, expand=True)
+data_guelph["lat"] = pd.to_numeric(data_guelph['lat'])
+data_guelph["lon"] = pd.to_numeric(data_guelph['lon'])
+
+# select columns and assign site
+data_duke_sp = data_duke[["ID_hormone", "lat", "lon"]]
+data_duke_sp["region"] = ["duke"] * len(data_duke_sp)
+data_guelph_sp = data_guelph[["Hair ID", "lat", "lon"]]
+data_guelph_sp["region"] = np.where(data_guelph_sp["lon"] > -80.5, "guelph", "detroit")
+
+# rename sample id column
+data_duke_sp = data_duke_sp.rename(columns = {"ID_hormone" : "sample_id"})
+data_guelph_sp = data_guelph_sp.rename(columns = {"Hair ID" : "sample_id"})
+
+# append data frames
+data_hormone_sp = pd.concat([data_duke_sp, data_guelph_sp])
+
 # make spatial
-data_sf = gpd.GeoDataFrame(data, geometry=gpd.points_from_xy(data.lon, data.lat))
+data_sf = gpd.GeoDataFrame(data_hormone_sp, geometry=gpd.points_from_xy(data_hormone_sp.lon, data_hormone_sp.lat))
 data_sf.set_crs(epsg=4326)
 # write to file
-data_sf.to_file(filename="data/spatial/data_cortisol_duke.gpkg", driver="GPKG")
+data_sf.to_file(filename="data/spatial/data_cortisol_duke_guelph.gpkg", driver="GPKG")
 
 # count unique coordinates
-data_sf_count = data.groupby(['lon', 'lat'])['lon', 'lat'].count()
+data_sf_count = data_hormone_sp.groupby(['lon', 'lat', 'region'], as_index=False).count()
 data_sf_count = gpd.GeoDataFrame(data_sf_count,
                                  geometry=gpd.points_from_xy(data_sf_count.lon, data_sf_count.lat))
 data_sf_count.set_crs(epsg=4326)
 # export to file
-data_sf_count.to_file(filename="data/spatial/data_cortisol_count_duke.gpkg", driver="GPKG")
+data_sf_count.to_file(filename="data/spatial/data_cortisol_count_duke_guelph.gpkg", driver="GPKG")
 
 # make buffer around point
 area = 40000 # 4 hectares
@@ -35,50 +56,27 @@ data_buffer = data_buffer.set_crs(epsg=4326)
 data_buffer = data_buffer.to_crs(epsg=32617)
 data_buffer = data_buffer.buffer(distance=radius)
 data_buffer = data_buffer.to_crs(epsg=4326)
+
+# add sample id and region data
+data_buffer = gpd.GeoDataFrame(data_sf[["sample_id", "lat", "lon", "region"]],
+                               geometry=data_buffer)
 # save
 data_buffer.to_file(filename="data/spatial/data_cortisol_buffer.gpkg", driver="GPKG",
                     OVERWRITE="YES")
 
-# save bounding box
-data_bbox = data_buffer.total_bounds
-data_bbox = box(*data_bbox)
-data_bbox = gpd.GeoSeries(data_bbox)
-data_bbox.to_file(filename="data/spatial/data_cortisol_bbox.shp")
+## save bounding box by region
+regions = ["duke", "guelph", "detroit"]
+bbox_list = []
+for i in regions:
+    data_bbox = data_buffer[data_buffer['region'] == i]['geometry'].total_bounds
+    data_bbox = box(*data_bbox)
+    data_bbox = gpd.GeoSeries(data_bbox)
+    data_bbox = data_bbox.set_crs(epsg=4326)
+    bbox_list.append(data_bbox)
 
-# rescale ndbi 0 - 1
-ndbi = rasterio.open("data/spatial/duke_built_up_cortisol.tif")
-profile = ndbi.profile
-ndbi_array = ndbi.read(1)
-ndbi_array[ndbi_array < -2] = np.nan
+# make single unioned polygon and export
+bbox_list = functools.reduce(gpd.GeoSeries.union, bbox_list)
 
-# rescale
-ndbi_array = ndbi_array - (np.nanmin(ndbi_array)) \
-             / np.ptp(ndbi_array[np.isnan(ndbi_array) == False])
-# plot to check
-plt.imshow(ndbi_array, cmap='cividis')
-plt.colorbar()
-plt.show()
-
-#### WORK IN PROGRESS ####
-
-#save scaled array
-ndbi_write = rasterio.open("data/spatial/duke_built_up_cortisol.tif", 'w', **profile)
-ndbi_write.write(ndbi_array.astype(rasterio.float32), 1)
-ndbi_write.close()
-
-# get zonal stats
-data_raster = []
-for name,file in zip(['ndvi', 'ndbi'], ['data/spatial/duke_ndvi_cortisol.tif', 'data/spatial/duke_built_up_cortisol.tif']):
-    zs = zonal_stats("data/spatial/data_cortisol_buffer.gpkg", file, 
-                    stats = ['mean','median','std'])
-    zs = pd.DataFrame(zs)
-    zs.rename(columns={'mean':(name + "_" + "mean"), 'std':(name + "_" + "sd"), 'median':(name + "_" + "median")}, inplace=True)
-    data_raster.append(zs)
-
-data_raster = pd.concat(data_raster, axis=1)
-
-# link to data
-data = pd.concat([data, data_raster], axis=1).drop(columns="geometry")
-
-# save file
-data.to_csv("data/data_cortisol_environmental_data_test.csv")
+# save
+bbox_list.to_file(filename="data/spatial/data_bboxes_cortisol.gpkg", driver="GPKG")
+bbox_list.to_file(filename="data/spatial/data_bboxes_cortisol.shp")
