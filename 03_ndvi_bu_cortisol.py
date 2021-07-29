@@ -2,10 +2,7 @@
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import box
-import rasterio
-from rasterio.plot import show
 import math
-from rasterstats import zonal_stats
 import matplotlib.pyplot as plt
 import numpy as np
 import functools
@@ -63,6 +60,7 @@ data_buffer = gpd.GeoDataFrame(data_sf[["sample_id", "lat", "lon", "region"]],
 # save
 data_buffer.to_file(filename="data/spatial/data_cortisol_buffer.gpkg", driver="GPKG",
                     OVERWRITE="YES")
+data_buffer.to_file(filename="data/spatial/data_cortisol_buffer.shp", OVERWRITE="YES")
 
 ## save bounding box by region
 regions = ["duke", "guelph", "detroit"]
