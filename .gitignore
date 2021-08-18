@@ -134,6 +134,12 @@ data/raw
 data/data_cortisol*.csv
 data/*.xlsx
 .Rproj.user
+data/raster/*.tif
+data/*.zip
+*.xml
+
+# no spatial da
+data/spatial/
 
 # ignore shapefile data
 *.cpg
