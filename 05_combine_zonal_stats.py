@@ -29,18 +29,24 @@ data.head()
 
 # save
 data.to_csv("data/data_zonalstats_all_locs.csv", index=False)
+# remove all but id hormone
+data = data[['ID_hormone', 'ndvi_mean', 'ndvi_sd', 'ndbi_mean', 'ndbi_sd']]
+data['ID_hormone'] = data['ID_hormone'].astype("str")
 
 # read full dataset and join by area and location
 full_data = pd.read_excel("data/raw/correct locations.xlsx")
 # remove old zonal stats
 full_data = full_data.drop(axis = 1, columns = ['ndvi_mean', 'built_up_mean', 'ndvi_sd', 'built_up_sd'])
+# make string ID hormone
+full_data['ID_hormone'] = full_data['ID_hormone'].astype('str')
+
 # join
-full_data = pd.concat([full_data, data], axis = 1)
+full_data = pd.merge(full_data, data, on=['ID_hormone'])
 
 # save full data
 full_data.to_csv("data/data_cortisol_all_locs.csv", index=False)
 
 # check with figure
 sns.scatterplot(x = "ndvi_mean", y = "ndbi_mean", hue = "area",
-                data = data)
+                data = full_data)
 plt.savefig("figures/fig_ndvi_ndbi_zonal_stats_gee_18_aug_21.png")
