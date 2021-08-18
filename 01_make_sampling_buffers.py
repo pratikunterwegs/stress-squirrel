@@ -74,6 +74,8 @@ for i in regions:
 
 # make single unioned polygon and export
 bbox_list = functools.reduce(gpd.GeoSeries.union, bbox_list)
+# split multipolygon
+bbox_list = bbox_list.explode()
 
 # save
 bbox_list.to_file(filename="data/spatial/data_bboxes_cortisol.gpkg", driver="GPKG")
