@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 # get zonal stats
 data_list = []
 for measure in ['ndvi', 'ndbi']:
-    mean = pd.read_csv("data/" + measure + "_mean_duke_guelph.csv")
+    mean = pd.read_csv("data/data_zonalstats_" + measure + "_mean.csv")
     mean = mean.rename(columns = {"mean" : measure + "_mean"})
     mean = mean.drop(columns=['system:index'])
-    sd = pd.read_csv("data/" + measure + "_std_duke_guelph.csv")
+    sd = pd.read_csv("data/data_zonalstats_" + measure + "_std.csv")
     sd = sd.rename(columns = {"stdDev" : measure + "_sd"})
     sd = sd.drop(columns=['system:index'])
-    data = pd.merge(mean, sd, on = ['sample_id', 'lat', 'lon', 'region'])
+    data = pd.merge(mean, sd, on = ['ID_hormone', 'lat', 'lon', 'area'])
     data_list.append(data)
 
 # merge list
@@ -23,10 +23,14 @@ data = functools.reduce(pd.merge, data_list)
 # check
 data.head()
 
+# rescale ndbi between 0 and 1
+data.ndbi_mean = (data.ndbi_mean - min(data.ndbi_mean)) / \
+    (max(data.ndbi_mean) - min(data.ndbi_mean))
+
 # save
-data.to_csv("data/data_cortisol_duke_guelph.csv", index=False)
+data.to_csv("data/data_cortisol_all_locs.csv", index=False)
 
 # check with figure
-sns.scatterplot(x = "ndvi_mean", y = "ndbi_mean", hue = "region",
+sns.scatterplot(x = "ndvi_mean", y = "ndbi_mean", hue = "area",
                 data = data)
-plt.savefig("figures/fig_ndvi_ndbi_zonal_stats_gee_29_jul_21.png")
+plt.savefig("figures/fig_ndvi_ndbi_zonal_stats_gee_18_aug_21.png")
