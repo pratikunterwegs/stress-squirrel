@@ -24,8 +24,8 @@ data = functools.reduce(pd.merge, data_list)
 data.head()
 
 # rescale ndbi between 0 and 1
-data.ndbi_mean = (data.ndbi_mean - min(data.ndbi_mean)) / \
-    (max(data.ndbi_mean) - min(data.ndbi_mean))
+# data.ndbi_mean = (data.ndbi_mean - min(data.ndbi_mean)) / \
+#     (max(data.ndbi_mean) - min(data.ndbi_mean))
 
 # save
 data.to_csv("data/data_zonalstats_all_locs.csv", index=False)
