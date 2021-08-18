@@ -63,6 +63,8 @@ data_buffer.to_file(filename="data/spatial/data_cortisol_buffer.gpkg", driver="G
 data_buffer.to_file(filename="data/spatial/data_cortisol_buffer.shp", OVERWRITE="YES")
 
 ## save bounding box by region
+# first remove windsor
+data_buffer = data_buffer[data_buffer['lon'] > -82.0]
 regions = ["Durham", "Guelph"]
 bbox_list = []
 for i in regions:
