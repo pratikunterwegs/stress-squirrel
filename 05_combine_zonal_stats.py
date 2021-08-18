@@ -28,7 +28,17 @@ data.ndbi_mean = (data.ndbi_mean - min(data.ndbi_mean)) / \
     (max(data.ndbi_mean) - min(data.ndbi_mean))
 
 # save
-data.to_csv("data/data_cortisol_all_locs.csv", index=False)
+data.to_csv("data/data_zonalstats_all_locs.csv", index=False)
+
+# read full dataset and join by area and location
+full_data = pd.read_excel("data/raw/correct locations.xlsx")
+# remove old zonal stats
+full_data = full_data.drop(axis = 1, columns = ['ndvi_mean', 'built_up_mean', 'ndvi_sd', 'built_up_sd'])
+# join
+full_data = pd.concat([full_data, data], axis = 1)
+
+# save full data
+full_data.to_csv("data/data_cortisol_all_locs.csv", index=False)
 
 # check with figure
 sns.scatterplot(x = "ndvi_mean", y = "ndbi_mean", hue = "area",
