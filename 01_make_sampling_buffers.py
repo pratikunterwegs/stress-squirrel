@@ -8,7 +8,7 @@ import numpy as np
 import functools
 
 # read in data
-data_duke = pd.read_excel("data/raw/correct locations.xlsx")
+data_duke = pd.read_excel("data/raw/hair data_final.xlsx")
 # data_guelph = pd.read_excel("data/raw/NewmanLab_Hair_Duke.xlsx")
 
 # split data guelph coordinates column
@@ -18,6 +18,7 @@ data_duke = pd.read_excel("data/raw/correct locations.xlsx")
 
 # select columns and assign site
 data_sp = data_duke[["ID_hormone", "lat", "lon", "area"]]
+data_sp.loc[data_sp.lon < -81.0, 'area'] = "Windsor"
 # data_duke_sp["region"] = ["duke"] * len(data_duke_sp)
 # data_guelph_sp = data_guelph[["Hair ID", "lat", "lon"]]
 # data_guelph_sp["region"] = np.where(data_guelph_sp["lon"] > -80.5, "guelph", "detroit")
@@ -64,8 +65,7 @@ data_buffer.to_file(filename="data/spatial/data_cortisol_buffer.shp", OVERWRITE=
 
 ## save bounding box by region
 # first remove windsor
-data_buffer = data_buffer[data_buffer['lon'] > -82.0]
-regions = ["Durham", "Guelph"]
+regions = ["Durham", "Guelph", "Windsor"]
 bbox_list = []
 for i in regions:
     data_bbox = data_buffer[data_buffer['area'] == i]['geometry'].total_bounds
