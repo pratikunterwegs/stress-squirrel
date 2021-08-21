@@ -20,6 +20,7 @@ for measure in ['ndvi', 'ndbi']:
 # merge list
 data = functools.reduce(pd.merge, data_list)
 
+data.loc[data.lon < -81.0, 'area'] = "Windsor"
 # check
 data.head()
 
@@ -34,9 +35,10 @@ data = data[['ID_hormone', 'ndvi_mean', 'ndvi_sd', 'ndbi_mean', 'ndbi_sd']]
 data['ID_hormone'] = data['ID_hormone'].astype("str")
 
 # read full dataset and join by area and location
-full_data = pd.read_excel("data/raw/correct locations.xlsx")
+full_data = pd.read_excel("data/raw/hair data_final.xlsx")
 # remove old zonal stats
-full_data = full_data.drop(axis = 1, columns = ['ndvi_mean', 'built_up_mean', 'ndvi_sd', 'built_up_sd'])
+full_data = full_data.drop(axis = 1, columns = ['ndvi_mean', 'built_up_mean', \
+    'ndvi_sd', 'built_up_sd', 'ndvi_median', 'built_up_median'])
 # make string ID hormone
 full_data['ID_hormone'] = full_data['ID_hormone'].astype('str')
 
